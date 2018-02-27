@@ -4,16 +4,15 @@ import task.Result;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Map;
 
 public interface FileService {
 
     void writeFile(List<Result> results);
 
-    List<Double> getValues(Path path);
+    List<Double> getValues(List<String> cycles);
 
-    String getLastDirectory();
+    Map<String, List<String>> getCycles(Path path);
 
-    void writeDirectoryToFile(String directory);
 
 }

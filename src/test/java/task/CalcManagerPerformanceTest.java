@@ -8,6 +8,7 @@ import org.junit.rules.MethodRule;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import task.service.CalcManager;
+import task.service.DocService;
 import task.service.FileService;
 
 import java.io.File;
@@ -18,6 +19,7 @@ public class CalcManagerPerformanceTest {
     private ApplicationContext context = new AnnotationConfigApplicationContext(task.config.AppConfig.class);
     private FileService fileService = context.getBean(FileService.class);
     private CalcManager calcManager = context.getBean(CalcManager.class);
+    private DocService docService = context.getBean(DocService.class);
 
     private File file = Paths.get("G:\\Trogg\\Knowledge\\Магистратура\\Научка\\Kuzmar\\10k1 BGTU sper Результаты").toFile();
 
@@ -28,11 +30,6 @@ public class CalcManagerPerformanceTest {
     @Test
     public void testFull() throws Exception {
         fileService.writeFile(calcManager.calculateValues(file));
-    }
-
-    @Test
-    public void testSelectPath() {
-        System.out.println(fileService.getLastDirectory());
     }
 
 }

@@ -8,6 +8,6 @@ import java.util.stream.Stream;
 
 public interface DocService {
 
-    public void writeToTable(List<Result> results, String filePath);
+    void writeToTable(List<Result> results, String filePath);
 
 }
