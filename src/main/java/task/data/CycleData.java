@@ -1,4 +1,4 @@
-package task;
+package task.data;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -6,7 +6,6 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CycleData {
-    private String name;
     private String maxPotential;
     private String minPotential;
 }

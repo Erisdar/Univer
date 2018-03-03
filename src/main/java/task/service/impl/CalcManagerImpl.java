@@ -1,10 +1,12 @@
 package task.service.impl;
 
 import io.vavr.control.Try;
+import one.util.streamex.StreamEx;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import task.CycleData;
-import task.Result;
+import task.data.CycleData;
+import task.data.DataObject;
+import task.data.Result;
 import task.service.CalcManager;
 import task.service.FileService;
 
@@ -30,6 +32,7 @@ public class CalcManagerImpl implements CalcManager {
     public List<Result> calculateValues(File folder) {
         Pattern p = Pattern.compile("^.*(\\.txt)$");
 
+
         return Try.of(() -> Files.walk(Paths.get(folder.toURI()))
                 .parallel()
                 .filter(path -> p.matcher(path.toString()).lookingAt())
@@ -39,19 +42,41 @@ public class CalcManagerImpl implements CalcManager {
                 .getOrNull();
     }
 
-    private List<CycleData> getCyclesData(Path path) {
+    @Override
+    public List<CycleData> getCyclesData(Path path) {
         DecimalFormatSymbols otherSymbols = new DecimalFormatSymbols(Locale.getDefault());
         otherSymbols.setDecimalSeparator('.');
         otherSymbols.setGroupingSeparator(',');
 
-        List<CycleData> cycleData = new ArrayList<>();
+        return fileService.getCycles(path).entrySet().stream()
+                .filter(mapCycles -> getMaxAndMinValue(fileService.getValues(mapCycles.getValue())).size() == 2)
+                .map(mapCycles -> {
+                    Map<Boolean, Double> map = getMaxAndMinValue(fileService.getValues(mapCycles.getValue()));
+                    return new CycleData(new DecimalFormat("#0.000000", otherSymbols).format(map.get(true)),
+                            new DecimalFormat("#0.000000", otherSymbols).format(map.get(false)));
+                })
+                .collect(Collectors.toList());
+    }
 
-        fileService.getCycles(path).forEach((k, v) -> {
-            List<Double> values = fileService.getValues(v);
-            cycleData.add(new CycleData(k, new DecimalFormat("#0.000000", otherSymbols).format(Collections.max(values) + ACCURACY_CONST),
-                    new DecimalFormat("#0.000000", otherSymbols).format(Collections.min(values) + ACCURACY_CONST)));
-        });
-
-        return cycleData;
+    @Override
+    public Map<Boolean, Double> getMaxAndMinValue(List<DataObject> dataObjectList) {
+        return StreamEx.of(dataObjectList)
+                .groupRuns((prev, next) ->
+                        (prev.getCurrent() > 0 && next.getCurrent() > 0) ||
+                                (prev.getCurrent() < 0 && next.getCurrent() < 0))
+                .filter((individualList) -> individualList.size() > 1)
+                .groupingBy(individualList -> individualList.stream().findFirst().get().getCurrent() > 0)
+                .entrySet().stream()
+                .map((mapPairs) -> new AbstractMap.SimpleEntry<>(mapPairs.getKey(),
+                        mapPairs.getValue().stream()
+                                .map(groupedIndividualList -> groupedIndividualList.stream()
+                                        .map(DataObject::getPotential)
+                                        .mapToDouble(potential -> potential)
+                                        .reduce(mapPairs.getKey() ? Double::max : Double::min)
+                                        .getAsDouble())
+                                .mapToDouble(maxOrMinValue -> maxOrMinValue + ACCURACY_CONST)
+                                .average()
+                                .getAsDouble()))
+                .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
     }
 }

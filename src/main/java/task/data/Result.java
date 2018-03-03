@@ -1,4 +1,4 @@
-package task;
+package task.data;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,6 +12,6 @@ public class Result {
 
     private Path file;
     private Double amperage;
-    private List<CycleData> stepData;
+    private List<CycleData> cycleData;
 
 }

@@ -20,7 +20,7 @@ public class JChooserServiceImpl implements JChooserService {
     @Override
     public File chooseFolder() {
 
-        chooser.setCurrentDirectory(new File("E:\\Для программы"));
+        chooser.setCurrentDirectory(new File("."));
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.showOpenDialog(null);

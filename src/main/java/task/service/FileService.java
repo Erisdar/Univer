@@ -1,6 +1,7 @@
 package task.service;
 
-import task.Result;
+import task.data.DataObject;
+import task.data.Result;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -10,7 +11,7 @@ public interface FileService {
 
     void writeFile(List<Result> results);
 
-    List<Double> getValues(List<String> cycles);
+    List<DataObject> getValues(List<String> cycles);
 
     Map<String, List<String>> getCycles(Path path);
 

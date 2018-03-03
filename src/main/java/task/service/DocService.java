@@ -1,10 +1,8 @@
 package task.service;
 
-import task.Result;
+import task.data.Result;
 
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
 public interface DocService {
 
