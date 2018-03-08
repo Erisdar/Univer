@@ -16,6 +16,5 @@ public class Main {
         JChooserService jChooserService = context.getBean(JChooserService.class);
 
         fileService.writeFile(calcManager.calculateValues(jChooserService.chooseFolder()));
-
     }
 }

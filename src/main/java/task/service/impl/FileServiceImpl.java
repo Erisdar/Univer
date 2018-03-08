@@ -1,6 +1,7 @@
 package task.service.impl;
 
 import io.vavr.control.Try;
+import one.util.streamex.StreamEx;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import task.data.DataObject;
@@ -10,10 +11,9 @@ import task.service.FileService;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -26,35 +26,28 @@ public class FileServiceImpl implements FileService {
     @Override
     public void writeFile(List<Result> results) {
 
-        Optional.ofNullable(results).ifPresent(res -> docService.writeToTable(results, results.get(0).getFile().getParent().toString().concat(".xls")));
-
+        Optional.ofNullable(results).ifPresent(res -> {
+            docService.writeToTable(results, results.stream().findFirst()
+                    .orElseThrow(() -> new IndexOutOfBoundsException("Folder have't needed files")).getFile()
+                    .getParent().toString().concat(".xls"));
+        });
     }
 
     @Override
-    public List<DataObject> getValues(List<String> cycles) {
-        return cycles.stream()
-                .parallel()
-                .map(line -> new DataObject(Double.parseDouble(line.split("([\\s])+")[1]), Double.parseDouble(line.split("([\\s])+")[2])))
+    public List<List<DataObject>> splitFileToCycles(Path path) {
+        Pattern groupingPattern = Pattern.compile("^(.*(Step|Time|Cycle).*)|(^$)$");
+        Pattern stringPattern = Pattern.compile("^(([-+])?\\d*[.]?\\d*\\s+){2}([-+])?\\d*[.]?\\d*\\s*$");
+
+        return StreamEx.of(Try.of(() -> Files.lines(path))
+                .getOrElseThrow(((Function<Throwable, IllegalStateException>) IllegalStateException::new)))
+                .groupRuns((prev, next) -> !groupingPattern.matcher(prev).matches() &&
+                        !groupingPattern.matcher(next).matches())
+                .filter(list -> list.size() > 1)
+                .map(list -> list.stream()
+                        .filter(string -> stringPattern.matcher(string).matches())
+                        .map(line -> new DataObject(Double.parseDouble(line.split("([\\s])+")[1]),
+                                Double.parseDouble(line.split("([\\s])+")[2])))
+                        .collect(Collectors.toList()))
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    public Map<String, List<String>> getCycles(Path path) {
-        Pattern p = Pattern.compile("^(.*(Step|Time|Physical Cycle).*)|(^$)$");
-        Map<String, List<String>> cyclesMap = new LinkedHashMap<>();
-
-        List<String> mainList = Try.of(() -> Files.lines(path).filter(line -> !p.matcher(line).matches())
-                .collect(Collectors.toList())).get();
-
-        long r = mainList.stream().filter(s -> s.contains("Cycle")).count();
-
-        for (int i = 0; i < r; i++) {
-            if (i < r - 1) {
-                cyclesMap.put("Cycle " + i + 1, mainList.subList(mainList.indexOf("Cycle " + String.valueOf(i + 1)) + 1, Optional.of(mainList.indexOf("Cycle " + String.valueOf(i + 2))).orElse(mainList.size())));
-            } else {
-                cyclesMap.put("Cycle " + i + 1, mainList.subList(mainList.indexOf("Cycle " + String.valueOf(i + 1)) + 1, mainList.size()));
-            }
-        }
-        return cyclesMap;
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import task.data.CycleData;
 import task.data.DataObject;
+import task.data.Extremum;
 import task.data.Result;
 import task.service.CalcManager;
 import task.service.FileService;
@@ -17,6 +18,7 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -30,16 +32,16 @@ public class CalcManagerImpl implements CalcManager {
 
     @Override
     public List<Result> calculateValues(File folder) {
-        Pattern p = Pattern.compile("^.*(\\.txt)$");
+        Pattern p = Pattern.compile("^((\\d*([.])\\d*)|(\\d+))\\s*(RT|IT).*(.txt)$");
 
-
-        return Try.of(() -> Files.walk(Paths.get(folder.toURI()))
+        return Try.of(() -> Files.walk(Paths.get(folder.toURI())))
+                .getOrElseThrow(((Function<Throwable, IllegalStateException>) IllegalStateException::new))
                 .parallel()
-                .filter(path -> p.matcher(path.toString()).lookingAt())
-                .map(path -> new Result(path, Double.parseDouble(path.getFileName().toString().split("(RT|IT)")[0]), getCyclesData(path)))
+                .filter(path -> p.matcher(path.getFileName().toString()).matches())
+                .map(path -> new Result(path,
+                        Double.parseDouble(path.getFileName().toString().split("(RT|IT)")[0]), getCyclesData(path)))
                 .sorted(Comparator.comparing(Result::getAmperage))
-                .collect(Collectors.toList()))
-                .getOrNull();
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -48,35 +50,36 @@ public class CalcManagerImpl implements CalcManager {
         otherSymbols.setDecimalSeparator('.');
         otherSymbols.setGroupingSeparator(',');
 
-        return fileService.getCycles(path).entrySet().stream()
-                .filter(mapCycles -> getMaxAndMinValue(fileService.getValues(mapCycles.getValue())).size() == 2)
-                .map(mapCycles -> {
-                    Map<Boolean, Double> map = getMaxAndMinValue(fileService.getValues(mapCycles.getValue()));
-                    return new CycleData(new DecimalFormat("#0.000000", otherSymbols).format(map.get(true)),
-                            new DecimalFormat("#0.000000", otherSymbols).format(map.get(false)));
+        return fileService.splitFileToCycles(path).stream()
+                .filter(cycle -> getExtremesValues(cycle).size() == 2)
+                .map(cycle -> {
+                    Map<Extremum, Double> cycleValues = getExtremesValues(cycle);
+                    return new CycleData(new DecimalFormat("#0.000000", otherSymbols).format(cycleValues.get(Extremum.Max)),
+                            new DecimalFormat("#0.000000", otherSymbols).format(cycleValues.get(Extremum.Min)));
                 })
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Map<Boolean, Double> getMaxAndMinValue(List<DataObject> dataObjectList) {
+    public Map<Extremum, Double> getExtremesValues(List<DataObject> dataObjectList) {
         return StreamEx.of(dataObjectList)
                 .groupRuns((prev, next) ->
                         (prev.getCurrent() > 0 && next.getCurrent() > 0) ||
                                 (prev.getCurrent() < 0 && next.getCurrent() < 0))
                 .filter((individualList) -> individualList.size() > 1)
-                .groupingBy(individualList -> individualList.stream().findFirst().get().getCurrent() > 0)
+                .groupingBy(individualList -> individualList.stream()
+                        .findFirst().orElseThrow(IllegalStateException::new).getCurrent() > 0)
                 .entrySet().stream()
-                .map((mapPairs) -> new AbstractMap.SimpleEntry<>(mapPairs.getKey(),
+                .map((mapPairs) -> new AbstractMap.SimpleEntry<>(mapPairs.getKey() ? Extremum.Max : Extremum.Min,
                         mapPairs.getValue().stream()
                                 .map(groupedIndividualList -> groupedIndividualList.stream()
                                         .map(DataObject::getPotential)
                                         .mapToDouble(potential -> potential)
                                         .reduce(mapPairs.getKey() ? Double::max : Double::min)
-                                        .getAsDouble())
+                                        .orElseThrow(() -> new RuntimeException("DataObject is null")))
                                 .mapToDouble(maxOrMinValue -> maxOrMinValue + ACCURACY_CONST)
                                 .average()
-                                .getAsDouble()))
+                                .orElseThrow(() -> new RuntimeException("DataObject is null"))))
                 .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
     }
 }

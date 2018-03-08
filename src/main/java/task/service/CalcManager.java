@@ -2,6 +2,7 @@ package task.service;
 
 import task.data.CycleData;
 import task.data.DataObject;
+import task.data.Extremum;
 import task.data.Result;
 
 import java.io.File;
@@ -13,7 +14,7 @@ public interface CalcManager {
 
     List<Result> calculateValues(File folder);
 
-    Map<Boolean, Double> getMaxAndMinValue(List<DataObject> dataObjectList);
+    Map<Extremum, Double> getExtremesValues(List<DataObject> dataObjectList);
 
     List<CycleData> getCyclesData(Path path);
 

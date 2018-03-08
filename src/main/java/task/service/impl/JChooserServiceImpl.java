@@ -24,8 +24,7 @@ public class JChooserServiceImpl implements JChooserService {
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         chooser.setAcceptAllFileFilterUsed(false);
         chooser.showOpenDialog(null);
-
         return Optional.ofNullable(chooser.getSelectedFile()).orElse(null);
-    }
 
+    }
 }
