@@ -13,7 +13,7 @@ task fatJar(type: Jar) {
                 'Main-Class': 'task.Main'
     }
     baseName = project.name
-    version = ""
+    version = "V5"
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
@@ -31,5 +31,5 @@ dependencies {
     compile "io.vavr:vavr:0.9.0"
     testCompile group: 'com.carrotsearch', name: 'junit-benchmarks', version: '0.3.0'
     testCompile "junit:junit:4.12"
-    implementation 'one.util:streamex:0.6.6'
+    compile group: 'one.util', name: 'streamex', version: '0.6.1'
 }

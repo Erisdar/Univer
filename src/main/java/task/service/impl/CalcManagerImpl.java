@@ -32,25 +32,25 @@ public class CalcManagerImpl implements CalcManager {
 
     @Override
     public List<Result> calculateValues(File folder) {
-        Pattern p = Pattern.compile("^((\\d*([.])\\d*)|(\\d+))\\s*(RT|IT).*(.txt)$");
+        Pattern fileName = Pattern.compile("^((\\d*([.])\\d*)|(\\d+))\\s*(RT|IT).*(.txt)$");
 
         return Try.of(() -> Files.walk(Paths.get(folder.toURI())))
                 .getOrElseThrow(((Function<Throwable, IllegalStateException>) IllegalStateException::new))
                 .parallel()
-                .filter(path -> p.matcher(path.getFileName().toString()).matches())
-                .map(path -> new Result(path,
-                        Double.parseDouble(path.getFileName().toString().split("(RT|IT)")[0]), getCyclesData(path)))
+                .filter(path -> fileName.matcher(path.getFileName().toString()).matches())
+                .map(file -> new Result(file,
+                        Double.parseDouble(file.getFileName().toString().split("(RT|IT)")[0]), getCyclesData(file)))
                 .sorted(Comparator.comparing(Result::getAmperage))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<CycleData> getCyclesData(Path path) {
+    public List<CycleData> getCyclesData(Path file) {
         DecimalFormatSymbols otherSymbols = new DecimalFormatSymbols(Locale.getDefault());
         otherSymbols.setDecimalSeparator('.');
         otherSymbols.setGroupingSeparator(',');
 
-        return fileService.splitFileToCycles(path).stream()
+        return fileService.splitFileToCycles(file).stream()
                 .filter(cycle -> getExtremesValues(cycle).size() == 2)
                 .map(cycle -> {
                     Map<Extremum, Double> cycleValues = getExtremesValues(cycle);
@@ -63,6 +63,15 @@ public class CalcManagerImpl implements CalcManager {
     @Override
     public Map<Extremum, Double> getExtremesValues(List<DataObject> dataObjectList) {
         return StreamEx.of(dataObjectList)
+                .filter(dataObject -> dataObject.getCurrent() != 0)
+                .filter(dataObject -> dataObjectList.indexOf(dataObject) != 0
+                        && dataObjectList.indexOf(dataObject) != dataObjectList.size() - 1)
+                .filter(dataObject -> (dataObject.getCurrent() > 0
+                        && (dataObjectList.get(dataObjectList.indexOf(dataObject) - 1).getCurrent() > 0 ||
+                        dataObjectList.get(dataObjectList.indexOf(dataObject) + 1).getCurrent() > 0)) ||
+                        (dataObject.getCurrent() < 0 &&
+                                (dataObjectList.get(dataObjectList.indexOf(dataObject) - 1).getCurrent() < 0 ||
+                                        dataObjectList.get(dataObjectList.indexOf(dataObject) + 1).getCurrent() < 0)))
                 .groupRuns((prev, next) ->
                         (prev.getCurrent() > 0 && next.getCurrent() > 0) ||
                                 (prev.getCurrent() < 0 && next.getCurrent() < 0))
