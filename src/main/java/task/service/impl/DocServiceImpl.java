@@ -47,15 +47,15 @@ public class DocServiceImpl implements DocService {
         Row secondRow = sheet.createRow(1);
         secondRow.createCell(0).setCellValue("I");
         for (int i = 0; i < maxCyclesCount; i++) {
-            secondRow.createCell(secondRow.getLastCellNum()).setCellValue("U max");
             secondRow.createCell(secondRow.getLastCellNum()).setCellValue("U min");
+            secondRow.createCell(secondRow.getLastCellNum()).setCellValue("U max");
         }
 
         // Create title: "Average"
         sheet.addMergedRegion(new CellRangeAddress(firstRow.getRowNum(), firstRow.getRowNum(), firstRow.getLastCellNum() + 1, firstRow.getLastCellNum() + 3));
         firstRow.createCell(firstRow.getLastCellNum() + 1).setCellValue("Average");
-        secondRow.createCell(secondRow.getLastCellNum()).setCellValue("U max");
         secondRow.createCell(secondRow.getLastCellNum()).setCellValue("U min");
+        secondRow.createCell(secondRow.getLastCellNum()).setCellValue("U max");
         secondRow.createCell(secondRow.getLastCellNum()).setCellValue("Aver");
 
         // Get data from results
